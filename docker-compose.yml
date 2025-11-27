@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: ${DB_CONTAINER_NAME}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: ${TZ}
+    ports:
+      - "${DB_PORT_HOST}:${DB_PORT_CONTAINER}"
+    volumes:
+      - orangehrm-db-data:/var/lib/mysql
+
+  orangehrm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${ORANGEHRM_IMAGE}
+    container_name: ${ORANGEHRM_CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    ports:
+      - "${OHRM_PORT_HOST}:${OHRM_PORT_CONTAINER}"
+    environment:
+      ORANGEHRM_DATABASE_HOST: mariadb
+      ORANGEHRM_DATABASE_USER: ${MYSQL_USER}
+      ORANGEHRM_DATABASE_PASSWORD: ${MYSQL_PASSWORD}
+      ORANGEHRM_DATABASE_NAME: ${MYSQL_DATABASE}
+      TZ: ${TZ}
+    volumes:
+      # Mount named volume at the real docroot so no anonymous volume is created
+      - orangehrm-app-data:/var/www/html
+      # - orangehrm-app-data:/orangehrm
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: ${PHPMYADMIN_CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: ${MYSQL_USER}
+      PMA_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "${PMA_PORT_HOST}:${PMA_PORT_CONTAINER}"
+
+  adminer:
+    image: adminer:latest
+    container_name: ${ADMINER_CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    ports:
+      - "${ADMINER_PORT_HOST}:${ADMINER_PORT_CONTAINER}"
+
+volumes:
+  orangehrm-db-data:
+  orangehrm-app-data:
